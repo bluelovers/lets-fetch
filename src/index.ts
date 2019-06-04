@@ -1,5 +1,5 @@
-const fetch = require('cross-fetch')
-const flow = require('./flow.js')
+import _fetch from 'cross-fetch'
+import * as flow from './flow'
 
 const defaultOptions = {
   type: 'json',
@@ -11,28 +11,30 @@ const defaultOptions = {
 let internalRetry = () => false
 let internalRetryWait = () => false
 
-module.exports = { retry, retryWait, single, many }
+export const fetch = _fetch;
 
 // Set a custom decider function that decides to retry
 // based on the number of tries and the previous error
-function retry (decider) {
+export function retry (decider) {
   internalRetry = decider
 }
 
 // Set a custom function that sets how long we should
 // sleep between each failed request
-function retryWait (callback) {
+export function retryWait (callback) {
   internalRetryWait = callback
 }
 
 // Request a single url
-function single (url, options = {}) {
+export function single (url, options = {}) {
   let tries = 1
 
   // Execute the request and retry if there are errors (and the
   // retry decider decided that we should try our luck again)
   const callRequest = () => request(url, options).catch(err => {
+    // @ts-ignore
     if (internalRetry(++tries, err)) {
+      // @ts-ignore
       return wait(callRequest, internalRetryWait(tries))
     }
 
@@ -43,7 +45,7 @@ function single (url, options = {}) {
 }
 
 // Send a request using the underlying fetch API
-function request (url, options) {
+export function request (url, options) {
   options = Object.assign({}, defaultOptions, options)
   let savedContent
   let savedResponse
@@ -54,7 +56,7 @@ function request (url, options) {
       .then(handleBody)
       .catch(handleError)
 
-    function handleResponse (response) {
+    function handleResponse (response: Response) {
       // Save the response for checking the status later
       savedResponse = response
 
@@ -88,7 +90,9 @@ function request (url, options) {
 
       // Enrich the error message with the response and the content
       let error = new Error(err.message)
+      // @ts-ignore
       error.response = savedResponse
+      // @ts-ignore
       error.content = savedContent
       reject(error)
     }
@@ -96,7 +100,9 @@ function request (url, options) {
 }
 
 // Request multiple pages
-function many (urls, options = {}) {
+export function many (urls, options: {
+  waitTime?: number
+} = {}) {
   let flowMethod = (options.waitTime) ? flow.series : flow.parallel
 
   // Call the single method while respecting the wait time in between tasks

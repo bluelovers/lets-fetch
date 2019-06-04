@@ -1,6 +1,7 @@
 /* eslint-env jest */
-const fetch = require('../src/index.js')
-const fetchMock = require('fetch-mock').sandbox()
+import * as fetch from '../src/index'
+import { sandbox } from 'fetch-mock'
+const fetchMock = sandbox()
 
 fetchMock.config.overwriteRoutes = false
 
@@ -13,7 +14,8 @@ function mockResponses (array) {
     fetchMock.mock.apply(fetchMock, args)
   })
 
-  fetch.__set__('fetch', fetchMock)
+  // @ts-ignore
+  fetch.fetch = fetchMock
 }
 
 describe('requesting', () => {
@@ -41,8 +43,11 @@ describe('requesting', () => {
     ])
 
     let content = await fetch.single('http://test.com/test', { type: 'response' })
+    // @ts-ignore
     expect(content.url).toEqual('http://test.com/test')
+    // @ts-ignore
     expect(content.status).toEqual(200)
+    // @ts-ignore
     expect(content.headers).not.toEqual(undefined)
   })
 
@@ -72,6 +77,7 @@ describe('requesting', () => {
       'http://test.com/test',
       'http://test.com/test2',
       'http://test.com/test3'
+      // @ts-ignore
     ], { type: 'text' })
     expect(content).toEqual([
       '<h1>Foo</h1>',
@@ -91,6 +97,7 @@ describe('requesting', () => {
       'http://test.com/test',
       'http://test.com/test2',
       'http://test.com/test3'
+      // @ts-ignore
     ], { type: 'response' })
     expect(content[0].url).toEqual('http://test.com/test')
     expect(content[0].status).toEqual(200)
@@ -199,6 +206,7 @@ describe('error handling', () => {
       await fetch.many([
         'http://failing.com/no',
         'http://failing.com/yes'
+        // @ts-ignore
       ], { type: 'text' })
     } catch (e) {
       var err = e
@@ -343,6 +351,7 @@ describe('retrying', () => {
 
     let start = new Date()
     await fetch.single('http://test.com/test', { type: 'text' })
+    // @ts-ignore
     expect(new Date() - start).toBeGreaterThan(99 * (1 + 2 + 3 + 4))
   })
 })

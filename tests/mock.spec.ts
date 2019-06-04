@@ -1,15 +1,24 @@
 /* eslint-env jest */
-const mock = require('../src/mock.js')
+import * as mock from '../src/mock'
+import * as fetch from '../src/index';
 
-mock.__set__('fetch', {
+// @ts-ignore
+//mock.__set__('fetch', {
+//  single: async () => 'Some Content',
+//  many: async () => ['Some Content'],
+//  retry: (cb) => cb()
+//})
+
+Object.assign(fetch, {
   single: async () => 'Some Content',
   many: async () => ['Some Content'],
   retry: (cb) => cb()
-})
+});
 
 describe('mock', () => {
   it('can add a response', async () => {
     mock.addResponse({ foo: 'bar' })
+    // @ts-ignore
     expect(await mock.single('some/url')).toEqual({ foo: 'bar' })
   })
 
@@ -18,6 +27,7 @@ describe('mock', () => {
     let error
 
     try {
+      // @ts-ignore
       await mock.single('some/url')
     } catch (err) {
       error = err
@@ -32,13 +42,16 @@ describe('mock', () => {
   it('can add multiple responses', async () => {
     mock.addResponse({ foo: 'bar' })
     mock.addResponse('string')
+    // @ts-ignore
     expect(await mock.single('some/url')).toEqual({ foo: 'bar' })
+    // @ts-ignore
     expect(await mock.single('some/url')).toEqual('string')
   })
 
   it('can use "many" for multiple responses', async () => {
     mock.addResponse({ foo: 'bar' })
     mock.addResponse('string')
+    // @ts-ignore
     let x = await mock.many(['some/url', 'some/url'])
     expect(x).toEqual([{ foo: 'bar' }, 'string'])
   })
@@ -47,6 +60,7 @@ describe('mock', () => {
     mock.reset()
     mock.addResponse({ foo: 'bar' })
 
+    // @ts-ignore
     await mock.single('some/url')
     expect(mock.urls()).toEqual(['some/url'])
     expect(mock.lastUrl()).toEqual('some/url')
@@ -66,6 +80,7 @@ describe('mock', () => {
     mock.addResponse({ foo: 'bar' })
     mock.reset()
 
+    // @ts-ignore
     let x = await mock.single('some/url')
     expect(x).toEqual(undefined)
   })
@@ -75,6 +90,7 @@ describe('mock', () => {
     mock.addResponse({ foo: 'bar' })
     mock.enableMocking(false)
 
+    // @ts-ignore
     let content = await mock.single('real/single/url')
     expect(content).toEqual('Some Content')
     expect(mock.lastUrl()).toEqual('real/single/url')
@@ -85,6 +101,7 @@ describe('mock', () => {
     mock.addResponse({ foo: 'bar' })
     mock.enableMocking(false)
 
+    // @ts-ignore
     let content = await mock.many('real/many/url')
     expect(content).toEqual(['Some Content'])
     expect(mock.lastUrl()).toEqual('real/many/url')
@@ -96,6 +113,7 @@ describe('mock', () => {
     mock.addResponse({ foo: 'bar' })
     mock.enableMocking(true)
 
+    // @ts-ignore
     let x = await mock.single('some/url')
     expect(x).toEqual({ foo: 'bar' })
   })
