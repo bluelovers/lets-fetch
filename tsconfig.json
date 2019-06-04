@@ -1,7 +1,18 @@
 {
   "extends": "@bluelovers/tsconfig",
   "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./lib",
     "esModuleInterop": true,
     "skipLibCheck": true
-  }
+  },
+  "files": [
+    "./src/index.ts",
+    "./src/mock.ts"
+  ],
+  "exclude": [
+    "**/tests/**",
+    "**/esm/**",
+    "**/lib/**"
+  ]
 }

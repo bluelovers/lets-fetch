@@ -10,17 +10,48 @@ export const enum EnumResponseType
 	text = 'text',
 }
 
+/**
+ * You can pass `single` and `many` an optional `options` parameter.
+ * The available options with their corresponding defaults are:
+ */
 export interface IOptions<T extends EnumResponseType = EnumResponseType> extends RequestInit
 {
+	/**
+	 * response type, can be "json", "text" or "response"
+	 */
 	type?: T,
+
+	/**
+	 * wait time in between requests (only for "many")
+	 * as soon as this is set, requests will be sent in series instead of parallel
+	 */
 	waitTime?: number,
+
+	/**
+	 * request/response timeout in ms, 0 to disable
+	 * (!) only available in node.js environments
+	 */
+	timeout?: number,
 }
 
 export class ResponseError<T = unknown> extends Error
 {
-	constructor(public response: Response, public content: T, message?: string)
+	/**
+	 * response is the last response object (so you can e.g. access err.response.status)
+	 */
+	response: Response;
+	/**
+	 * content is the parsed body of the response, if available
+	 * @param {string} message
+	 */
+	content: T;
+
+	constructor(response: Response, content: T, message?: string)
 	{
 		super((message != null) ? message : 'Status ' + response.status)
+
+		this.response = response
+		this.content = content
 	}
 }
 
@@ -36,21 +67,27 @@ let internalRetryWait = (tries: number): Resolvable<number> => 0
 
 export const fetch = _fetch;
 
-// Set a custom decider function that decides to retry
-// based on the number of tries and the previous error
+/**
+ * Set a custom decider function that decides to retry
+ * based on the number of tries and the previous error
+ */
 export function retry(decider: <T extends Error>(tries: number, err: T) => Resolvable<boolean>)
 {
 	internalRetry = decider
 }
 
-// Set a custom function that sets how long we should
-// sleep between each failed request
+/**
+ * Set a custom function that sets how long we should
+ * sleep between each failed request
+ */
 export function retryWait(callback: (tries: number) => Resolvable<number>)
 {
 	internalRetryWait = callback
 }
 
-// Request a single url
+/**
+ * Request a single url
+ */
 export function single<T>(url: string, options: IOptions = {}): Bluebird<T>
 {
 	let tries = 1
@@ -70,10 +107,25 @@ export function single<T>(url: string, options: IOptions = {}): Bluebird<T>
 	return callRequest()
 }
 
+/**
+ * Send a request using the underlying fetch API
+ */
 export function request<T>(url: string, options: IOptions<EnumResponseType.json>): Bluebird<T>
+/**
+ * Send a request using the underlying fetch API
+ */
 export function request<T extends string>(url: string, options: IOptions<EnumResponseType.text>): Bluebird<T>
+/**
+ * Send a request using the underlying fetch API
+ */
 export function request<T extends Response>(url: string, options: IOptions<EnumResponseType.response>): Bluebird<T>
+/**
+ * Send a request using the underlying fetch API
+ */
 export function request<T>(url: string, options: IOptions): Bluebird<T>
+/**
+ * Send a request using the underlying fetch API
+ */
 export function request<T extends Response>(url: string, options?: IOptions): Bluebird<T>
 /**
  * Send a request using the underlying fetch API
@@ -139,7 +191,9 @@ export function request<T>(url: string, options: IOptions): Bluebird<T>
 	})
 }
 
-// Request multiple pages
+/**
+ * Request multiple pages
+ */
 export function many<T extends unknown[]>(urls: string[], options: IOptions = {}): Bluebird<T>
 {
 	let { waitTime } = options;
@@ -153,7 +207,9 @@ export function many<T extends unknown[]>(urls: string[], options: IOptions = {}
 		;
 }
 
-// Wait a specific time before executing a callback
+/**
+ * Wait a specific time before executing a callback
+ */
 function wait<T>(callback: () => Resolvable<T>, ms: Resolvable<number>)
 {
 	return Bluebird

@@ -1,0 +1,15 @@
+import * as fetch from './index';
+import Bluebird from 'bluebird';
+import { IOptions } from './index';
+declare type IMockResponse = Partial<Response>;
+export declare function addResponse(content: any): void;
+export declare function addResponseError<T>(response: IMockResponse, content: T): void;
+export declare function reset(): void;
+export declare function urls(): string[];
+export declare function options(): fetch.IOptions<fetch.EnumResponseType>[];
+export declare function lastUrl(): string;
+export declare function lastOption(): fetch.IOptions<fetch.EnumResponseType>;
+export declare function enableMocking(bool: boolean): void;
+export declare function single<T>(url: string, opt?: IOptions): Bluebird<T>;
+export declare function many<T extends unknown[]>(urls: string[], opt?: IOptions): Bluebird<T>;
+export {};

@@ -1,6 +1,6 @@
 /* eslint-env jest */
-import * as fetch from '../src/index'
-import { EnumResponseType, IOptions } from '../src/index'
+import * as fetch from '../src'
+import { EnumResponseType, IOptions } from '../src'
 import { sandbox } from 'fetch-mock'
 
 const fetchMock = sandbox()
