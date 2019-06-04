@@ -1,6 +1,7 @@
 /* eslint-env jest */
 import * as mock from '../src/mock'
 import * as fetch from '../src/index';
+import { EnumResponseType, IOptions } from '../src/index';
 
 // @ts-ignore
 //mock.__set__('fetch', {
@@ -51,7 +52,7 @@ describe('mock', () => {
   it('can use "many" for multiple responses', async () => {
     mock.addResponse({ foo: 'bar' })
     mock.addResponse('string')
-    // @ts-ignore
+
     let x = await mock.many(['some/url', 'some/url'])
     expect(x).toEqual([{ foo: 'bar' }, 'string'])
   })
@@ -69,7 +70,7 @@ describe('mock', () => {
   it('can reset and get the request options', async () => {
     mock.reset()
     mock.addResponse({ foo: 'bar' })
-    let options = { type: 'text', headers: { Authenticate: 'Token' } }
+    let options: IOptions = { type: EnumResponseType.text, headers: { Authenticate: 'Token' } }
 
     await mock.single('some/url', options)
     expect(mock.options()).toEqual([options])

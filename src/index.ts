@@ -1,122 +1,164 @@
 import _fetch from 'cross-fetch'
-import * as flow from './flow'
+import Bluebird from 'bluebird'
 
-const defaultOptions = {
-  type: 'json',
-  method: 'GET',
-  headers: {},
-  body: undefined
+export type Resolvable<R> = R | PromiseLike<R>;
+
+export const enum EnumResponseType
+{
+	response = 'response',
+	json = 'json',
+	text = 'text',
 }
 
-let internalRetry = () => false
-let internalRetryWait = () => false
+export interface IOptions<T extends EnumResponseType = EnumResponseType> extends RequestInit
+{
+	type?: T,
+	waitTime?: number,
+}
+
+export class ResponseError<T = unknown> extends Error
+{
+	constructor(public response: Response, public content: T, message?: string)
+	{
+		super((message != null) ? message : 'Status ' + response.status)
+	}
+}
+
+const defaultOptions: IOptions = {
+	type: EnumResponseType.json,
+	method: 'GET',
+	headers: {},
+	body: undefined,
+}
+
+let internalRetry = <T extends Error>(tries: number, err: T): Resolvable<boolean> => false
+let internalRetryWait = (tries: number): Resolvable<number> => 0
 
 export const fetch = _fetch;
 
 // Set a custom decider function that decides to retry
 // based on the number of tries and the previous error
-export function retry (decider) {
-  internalRetry = decider
+export function retry(decider: <T extends Error>(tries: number, err: T) => Resolvable<boolean>)
+{
+	internalRetry = decider
 }
 
 // Set a custom function that sets how long we should
 // sleep between each failed request
-export function retryWait (callback) {
-  internalRetryWait = callback
+export function retryWait(callback: (tries: number) => Resolvable<number>)
+{
+	internalRetryWait = callback
 }
 
 // Request a single url
-export function single (url, options = {}) {
-  let tries = 1
+export function single<T>(url: string, options: IOptions = {}): Bluebird<T>
+{
+	let tries = 1
 
-  // Execute the request and retry if there are errors (and the
-  // retry decider decided that we should try our luck again)
-  const callRequest = () => request(url, options).catch(err => {
-    // @ts-ignore
-    if (internalRetry(++tries, err)) {
-      // @ts-ignore
-      return wait(callRequest, internalRetryWait(tries))
-    }
+	// Execute the request and retry if there are errors (and the
+	// retry decider decided that we should try our luck again)
+	const callRequest = () => request<T>(url, options).catch(async (err) =>
+	{
+		if (await internalRetry(++tries, err))
+		{
+			return wait(callRequest, internalRetryWait(tries))
+		}
 
-    throw err
-  })
+		throw err
+	})
 
-  return callRequest()
+	return callRequest()
 }
 
-// Send a request using the underlying fetch API
-export function request (url, options) {
-  options = Object.assign({}, defaultOptions, options)
-  let savedContent
-  let savedResponse
+export function request<T>(url: string, options: IOptions<EnumResponseType.json>): Bluebird<T>
+export function request<T extends string>(url: string, options: IOptions<EnumResponseType.text>): Bluebird<T>
+export function request<T extends Response>(url: string, options: IOptions<EnumResponseType.response>): Bluebird<T>
+export function request<T>(url: string, options: IOptions): Bluebird<T>
+export function request<T extends Response>(url: string, options?: IOptions): Bluebird<T>
+/**
+ * Send a request using the underlying fetch API
+ */
+export function request<T>(url: string, options: IOptions): Bluebird<T>
+{
+	options = Object.assign({}, defaultOptions, options)
+	let savedContent
+	let savedResponse
 
-  return new Promise((resolve, reject) => {
-    fetch(url, options)
-      .then(handleResponse)
-      .then(handleBody)
-      .catch(handleError)
+	return new Bluebird((resolve, reject) =>
+	{
+		fetch(url, options)
+			.then(handleResponse)
+			.then(handleBody)
+			.catch(handleError)
 
-    function handleResponse (response: Response) {
-      // Save the response for checking the status later
-      savedResponse = response
+		function handleResponse(response: Response)
+		{
+			// Save the response for checking the status later
+			savedResponse = response
 
-      // Decode the response body
-      switch (options.type) {
-        case 'response':
-          return response
-        case 'json':
-          return response.json()
-        default:
-          return response.text()
-      }
-    }
+			// Decode the response body
+			switch (options.type)
+			{
+				case EnumResponseType.text:
+					return response.text()
+				case EnumResponseType.json:
+					return response.json()
+				case EnumResponseType.response:
+				default:
+					return response
+			}
+		}
 
-    function handleBody (content) {
-      // Bubble an error if the response status is not okay
-      if (savedResponse && savedResponse.status >= 400) {
-        savedContent = content
-        throw new Error(`Response status indicates error`)
-      }
+		function handleBody(content)
+		{
+			// Bubble an error if the response status is not okay
+			if (savedResponse && savedResponse.status >= 400)
+			{
+				savedContent = content
+				throw new Error(`Response status indicates error`)
+			}
 
-      // All is well!
-      resolve(content)
-    }
+			// All is well!
+			resolve(content)
+		}
 
-    function handleError (err) {
-      // Overwrite potential decoding errors when the actual problem was the response
-      if (savedResponse && savedResponse.status >= 400) {
-        err = new Error(`Status ${savedResponse.status}`)
-      }
+		function handleError(err: Error | ResponseError)
+		{
+			// Overwrite potential decoding errors when the actual problem was the response
+			if (savedResponse && savedResponse.status >= 400)
+			{
+				err = new ResponseError(savedResponse, savedContent)
+			}
+			else
+			{
+				err = new ResponseError(savedResponse, savedContent, err.message)
+			}
 
-      // Enrich the error message with the response and the content
-      let error = new Error(err.message)
-      // @ts-ignore
-      error.response = savedResponse
-      // @ts-ignore
-      error.content = savedContent
-      reject(error)
-    }
-  })
+			reject(err)
+		}
+	})
 }
 
 // Request multiple pages
-export function many (urls, options: {
-  waitTime?: number
-} = {}) {
-  let flowMethod = (options.waitTime) ? flow.series : flow.parallel
+export function many<T extends unknown[]>(urls: string[], options: IOptions = {}): Bluebird<T>
+{
+	let { waitTime } = options;
 
-  // Call the single method while respecting the wait time in between tasks
-  const callSingle = (url) => single(url, options)
-    .then(content => wait(() => content, options.waitTime))
-
-  // Map over the urls and call them using the method the user chose
-  let promises = urls.map(url => () => callSingle(url))
-  return flowMethod(promises)
+	return Bluebird
+		.resolve(urls)
+		[waitTime ? 'mapSeries' as any as 'map' : 'map'](async (url) =>
+	{
+		return single(url, options).tap(() => Bluebird.delay(waitTime))
+	}) as Bluebird<T>
+		;
 }
 
 // Wait a specific time before executing a callback
-function wait (callback, ms) {
-  return new Promise(resolve => {
-    setTimeout(() => resolve(callback()), ms || 0)
-  })
+function wait<T>(callback: () => Resolvable<T>, ms: Resolvable<number>)
+{
+	return Bluebird
+		.resolve(ms)
+		.tap(ms => Bluebird.delay(ms))
+		.then(() => callback())
+		;
 }

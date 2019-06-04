@@ -1,6 +1,8 @@
 /* eslint-env jest */
 import * as fetch from '../src/index'
+import { EnumResponseType, IOptions } from '../src/index'
 import { sandbox } from 'fetch-mock'
+
 const fetchMock = sandbox()
 
 fetchMock.config.overwriteRoutes = false
@@ -33,7 +35,7 @@ describe('requesting', () => {
       ['http://test.com/test', '<h1>Foo</h1>']
     ])
 
-    let content = await fetch.single('http://test.com/test', { type: 'text' })
+    let content = await fetch.single('http://test.com/test', { type: EnumResponseType.text })
     expect(content).toEqual('<h1>Foo</h1>')
   })
 
@@ -42,7 +44,7 @@ describe('requesting', () => {
       ['http://test.com/test', '<h1>Foo</h1>']
     ])
 
-    let content = await fetch.single('http://test.com/test', { type: 'response' })
+    let content = await fetch.single('http://test.com/test', { type: EnumResponseType.response })
     // @ts-ignore
     expect(content.url).toEqual('http://test.com/test')
     // @ts-ignore
@@ -111,9 +113,11 @@ describe('waiting', () => {
       ['*', () => ({ time: new Date().getTime() })]
     ])
 
-    let timestamps = await fetch.many(['http://1.com', 'http://2.com', 'http://3.com'])
+    let timestamps = await fetch.many<{
+      time: number
+      }[]>(['http://1.com', 'http://2.com', 'http://3.com'])
+      .map(x => x.time)
 
-    timestamps = timestamps.map(x => x.time)
     expect(timestamps[1] - timestamps[0]).toBeLessThan(20)
     expect(timestamps[2] - timestamps[1]).toBeLessThan(20)
   })
@@ -123,12 +127,13 @@ describe('waiting', () => {
       ['*', () => ({ time: new Date().getTime() })]
     ])
 
-    let timestamps = await fetch.many(
+    let timestamps = await fetch.many<{
+      time: number
+    }[]>(
       ['http://1.com', 'http://2.com', 'http://3.com'],
       { waitTime: 100 }
-    )
+    ).map(x => x.time)
 
-    timestamps = timestamps.map(x => x.time)
     expect(timestamps[1] - timestamps[0]).toBeGreaterThan(99)
     expect(timestamps[2] - timestamps[1]).toBeGreaterThan(99)
   })
@@ -155,8 +160,8 @@ describe('underlying fetch api', () => {
       ['http://test.com/test', '<h1>Foo</h1>']
     ])
 
-    let options = {
-      type: 'text',
+    let options: IOptions = {
+      type: EnumResponseType.text,
       method: 'POST',
       headers: { 'Authentication': 'Test' },
       body: 'foo=bar'
@@ -188,7 +193,7 @@ describe('error handling', () => {
     ])
 
     try {
-      await fetch.single('http://failing.com/yes', { type: 'response' })
+      await fetch.single('http://failing.com/yes', { type: EnumResponseType.response })
     } catch (e) {
       var err = e
     }
@@ -274,7 +279,7 @@ describe('retrying', () => {
       ['http://test.com/test', 'not text']
     ])
 
-    let content = await fetch.single('http://test.com/test', { type: 'text' })
+    let content = await fetch.single('http://test.com/test', { type: EnumResponseType.text })
     expect(content).toEqual('text')
   })
 
@@ -350,7 +355,7 @@ describe('retrying', () => {
     ])
 
     let start = new Date()
-    await fetch.single('http://test.com/test', { type: 'text' })
+    await fetch.single('http://test.com/test', { type: EnumResponseType.text })
     // @ts-ignore
     expect(new Date() - start).toBeGreaterThan(99 * (1 + 2 + 3 + 4))
   })

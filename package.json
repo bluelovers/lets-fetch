@@ -13,6 +13,7 @@
     "url": "https://github.com/queicherius/lets-fetch"
   },
   "dependencies": {
+    "bluebird": "^3.5.5",
     "cross-fetch": "^3.0.3"
   },
   "devDependencies": {

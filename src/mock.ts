@@ -1,78 +1,91 @@
 import * as fetch from './index'
-import * as flow from './flow'
+import { ResponseError } from './index';
+import Bluebird from 'bluebird'
+import { IOptions } from './index';
 
-let reqResponses = []
-let reqOptions = []
-let reqUrls = []
+let reqResponses: (IMockResponse | ResponseError)[] = []
+let reqOptions: IOptions[] = []
+let reqUrls: string[] = []
 let mockingEnabled = true
 
-export function addResponse (content) {
-  reqResponses.push(content)
+type IMockResponse = Partial<Response>
+
+export function addResponse(content)
+{
+	reqResponses.push(content)
 }
 
-export function addResponseError (response, content) {
-  const responseError = new Error('Status ' + response.status)
-  // @ts-ignore
-  responseError.response = response
-  // @ts-ignore
-  responseError.content = content
+export function addResponseError<T>(response: IMockResponse, content: T)
+{
+	const responseError = new ResponseError(response as any, content)
 
-  reqResponses.push(responseError)
+	reqResponses.push(responseError)
 }
 
-export function reset () {
-  reqResponses = []
-  reqOptions = []
-  reqUrls = []
-  fetch.retry(() => false)
+export function reset()
+{
+	reqResponses = []
+	reqOptions = []
+	reqUrls = []
+	fetch.retry(() => false)
 }
 
-export function urls () {
-  return reqUrls
+export function urls()
+{
+	return reqUrls
 }
 
-export function options () {
-  return reqOptions
+export function options()
+{
+	return reqOptions
 }
 
-export function lastUrl () {
-  return reqUrls[reqUrls.length - 1]
+export function lastUrl()
+{
+	return reqUrls[reqUrls.length - 1]
 }
 
-export function lastOption () {
-  return reqOptions[reqOptions.length - 1]
+export function lastOption()
+{
+	return reqOptions[reqOptions.length - 1]
 }
 
-export function enableMocking (bool) {
-  mockingEnabled = bool
+export function enableMocking(bool: boolean)
+{
+	mockingEnabled = bool
 }
 
-export function single (url, opt) {
-  reqUrls.push(url)
-  reqOptions.push(opt)
+export function single<T>(url: string, opt?: IOptions)
+{
+	reqUrls.push(url)
+	reqOptions.push(opt)
 
-  if (!mockingEnabled) {
-    return fetch.single(url, opt)
-  }
+	if (!mockingEnabled)
+	{
+		return fetch.single<T>(url, opt)
+	}
 
-  return new Promise((resolve, reject) => {
-    let response = reqResponses.shift()
+	return new Bluebird<T>((resolve, reject) =>
+	{
+		let response = reqResponses.shift()
 
-    if (response instanceof Error) {
-      return reject(response)
-    }
+		if (response instanceof Error)
+		{
+			return reject(response)
+		}
 
-    resolve(response)
-  })
+		resolve(response as any as T)
+	})
 }
 
-export function many (urls, opt) {
-  if (!mockingEnabled) {
-    reqUrls = reqUrls.concat(urls)
-    reqOptions = reqOptions.concat(opt)
-    return fetch.many(urls, opt)
-  }
+export function many<T extends unknown[]>(urls: string[], opt?: IOptions): Bluebird<T>
+{
+	if (!mockingEnabled)
+	{
+		reqUrls = reqUrls.concat(urls)
+		reqOptions = reqOptions.concat(opt)
+		return fetch.many<T>(urls, opt)
+	}
 
-  let requests = urls.map(url => () => single(url, opt))
-  return flow.parallel(requests)
+	return Bluebird.resolve(urls).map(url => single(url, opt)) as Bluebird<T>
 }
