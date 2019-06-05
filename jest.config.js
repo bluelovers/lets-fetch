@@ -3,7 +3,8 @@ module.exports = {
   testEnvironment: 'node',
   "globals": {
     "ts-jest": {
-      "isolatedModules": true
+      "esModuleInterop": true,
+      "skipLibCheck": true
     }
   }
 };

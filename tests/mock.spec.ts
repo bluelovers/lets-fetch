@@ -1,6 +1,9 @@
 /* eslint-env jest */
-import mock from '../lib/mock'
 import { EnumResponseType } from '../lib/fetch';
+import { LetsWrapMock } from '../lib/coreMock';
+import LetsWrapFetch from '../lib/fetch';
+
+let mock = new LetsWrapMock(new LetsWrapFetch())
 
 // @ts-ignore
 //mock.__set__('fetch', {

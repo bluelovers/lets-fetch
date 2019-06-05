@@ -1,23 +1,14 @@
 import { Resolvable, resolveCall, wait } from './util';
 import Bluebird from 'bluebird';
 import { BindAll } from 'lodash-decorators/bindAll'
+import { ITSOverwrite } from 'ts-type'
 
-export interface IRetryFn
-{
-	<T extends Error>(tries: number, err?: T): Resolvable<boolean>
-}
-
-export interface IRetryWaitFn
-{
-	(tries: number): Resolvable<number>
-}
-
-export interface IHttpRequest<O, R>
+export interface IHttpRequest<O = unknown, R = unknown>
 {
 	request(url: string, options?: O): PromiseLike<R>
 }
 
-export interface ILetsWrapOptions<O, R>
+export interface ILetsWrapOptionsCore<H extends IHttpRequest>
 {
 	/**
 	 * wait time in between requests (only for "many")
@@ -31,28 +22,28 @@ export interface ILetsWrapOptions<O, R>
 	 */
 	timeout?: number,
 
-	requestOptions?: Partial<O>,
+	requestOptions?: Partial<IUnpackHttpRequestOptions<H>>,
 
 	internalRetry?: IRetryFn,
 	internalRetryWait?: IRetryWaitFn,
 
-	http?: IHttpRequest<O, R>
+	http?: H
 }
 
 const _internalRetry: IRetryFn = () => false;
 const _internalRetryWait: IRetryWaitFn = (tries) => 0;
 
 @BindAll()
-export class LetsWrap<O = {}, R = Response, H = IHttpRequest<O, R>>
+export class LetsWrap<H extends IHttpRequest, O = Record<string, unknown>>
 {
 	public $http: H;
 
-	constructor(protected defaultOptions: ILetsWrapOptions<O, R> = {})
+	constructor(protected defaultOptions: ILetsWrapOptions<H, O> = {} as any)
 	{
-		this.setDefault({})
+		this.setDefault({} as any)
 	}
 
-	setDefault(options: ILetsWrapOptions<O, R>)
+	setDefault(options?: ILetsWrapOptions<H, O>)
 	{
 		let defaultOptions = this.defaultOptions
 
@@ -74,13 +65,21 @@ export class LetsWrap<O = {}, R = Response, H = IHttpRequest<O, R>>
 	/**
 	 * Send a request using the underlying fetch API
 	 */
-	request<T = R>(url: string, options?: ILetsWrapOptions<O, R>): Bluebird<T>
+	request<T = IUnpackReturnTypeHttpRequest<H>>(url: string, options?: ILetsWrapOptions<H, O>): Bluebird<T>
 	{
 		return Bluebird
 			.resolve(this.mergeOptions(options))
 			.then((options) =>
 			{
-				return (this.$http as any as IHttpRequest<O, R>).request(url, options.requestOptions as any)
+				return this.$http.request(url, options.requestOptions as any)
+			})
+			.tap(v => {
+				/*
+				console.dir({
+					url,
+					v,
+				});
+				 */
 			}) as any as Bluebird<T>
 			;
 	}
@@ -88,7 +87,7 @@ export class LetsWrap<O = {}, R = Response, H = IHttpRequest<O, R>>
 	/**
 	 * Request a single url
 	 */
-	single<T = R>(url: string, options?: ILetsWrapOptions<O, R>): Bluebird<T>
+	single<T = IUnpackReturnTypeHttpRequest<H>>(url: string, options?: ILetsWrapOptions<H, O>): Bluebird<T>
 	{
 		let tries = 1;
 
@@ -103,10 +102,10 @@ export class LetsWrap<O = {}, R = Response, H = IHttpRequest<O, R>>
 					return this.request(url, options)
 						.catch(async (err) =>
 						{
-
 							if (await internalRetry(++tries, err))
 							{
-								return wait(callRequest, internalRetryWait(tries))
+								await Bluebird.delay(await internalRetryWait(tries))
+								return callRequest()
 							}
 
 							return Bluebird.reject(err)
@@ -118,7 +117,7 @@ export class LetsWrap<O = {}, R = Response, H = IHttpRequest<O, R>>
 			;
 	}
 
-	many<T extends unknown[] = R[]>(urls: string[], options: ILetsWrapOptions<O, R> = {}): Bluebird<T>
+	many<T extends unknown[] = IUnpackReturnTypeHttpRequest<H>[]>(urls: string[], options?: ILetsWrapOptions<H, O>): Bluebird<T>
 	{
 		return Bluebird
 			.resolve(this.mergeOptions(options))
@@ -130,7 +129,7 @@ export class LetsWrap<O = {}, R = Response, H = IHttpRequest<O, R>>
 					.resolve(urls)
 					[waitTime ? 'mapSeries' as any as 'map' : 'map'](async (url) =>
 				{
-					return this.single(url, options).tap(() => Bluebird.delay(waitTime))
+					return this.single(url, options).tap(() => Bluebird.delay(waitTime | 0))
 
 				}) as any as Bluebird<T>
 					;
@@ -138,14 +137,15 @@ export class LetsWrap<O = {}, R = Response, H = IHttpRequest<O, R>>
 			;
 	}
 
-	mergeOptions(options: ILetsWrapOptions<O, R>): ILetsWrapOptions<O, R>
+	mergeOptions(options: ILetsWrapOptions<H, O>): ILetsWrapOptions<H, O>
 	{
 		let defaultOptions = this.options;
+		// @ts-ignore
 		options = options || {};
 
 		let requestOptions = Object.assign({}, defaultOptions.requestOptions, options.requestOptions) as O;
 
-		return Object.assign({} as ILetsWrapOptions<O, R>, defaultOptions, options, {
+		return Object.assign({} as ILetsWrapOptions<H, O>, defaultOptions, options, {
 			requestOptions,
 		});
 	}
@@ -172,7 +172,7 @@ export class LetsWrap<O = {}, R = Response, H = IHttpRequest<O, R>>
 		return this;
 	}
 
-	get options(): ILetsWrapOptions<O, R>
+	get options(): ILetsWrapOptions<H, O>
 	{
 		return {
 			...this.defaultOptions,
@@ -181,10 +181,28 @@ export class LetsWrap<O = {}, R = Response, H = IHttpRequest<O, R>>
 		}
 	}
 
-	clone<H2 = H, R2 = R, O2 = O>(options: ILetsWrapOptions<O | O2, R | R2> = {}): LetsWrap<O2, R2, H2>
+	clone<H2 extends IHttpRequest = H, O2 = O>(options?: ILetsWrapOptions<H | H2, O | O2>): LetsWrap<H2, O2>
 	{
 		return new LetsWrap(this.mergeOptions(options as any) as any)
 	}
+}
+
+export type ILetsWrapOptions<H extends IHttpRequest, O = Record<string, unknown>> = ILetsWrapOptionsCore<H> & O
+
+export type IUnpackReturnTypeHttpRequest<H> =
+	H extends IHttpRequest<any, infer R> ? (R extends Resolvable<infer U> ? U : R): unknown
+
+export type IUnpackHttpRequestOptions<H> =
+	H extends IHttpRequest<infer R, any> ? R: unknown
+
+export interface IRetryFn
+{
+	<T extends Error>(tries: number, err?: T): Resolvable<boolean>
+}
+
+export interface IRetryWaitFn
+{
+	(tries: number): Resolvable<number>
 }
 
 export default LetsWrap

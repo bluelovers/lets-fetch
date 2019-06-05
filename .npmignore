@@ -58,3 +58,5 @@ karma.conf.js
 /_config.yml
 intellij-style-guide.xml
 jest.config.js
+/src/*.d.ts
+/src/*.js

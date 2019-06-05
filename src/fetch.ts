@@ -1,6 +1,6 @@
 import _fetch from 'cross-fetch'
 import Bluebird from 'bluebird'
-import LetsWrap, { ILetsWrapOptions } from './core';
+import LetsWrap, { ILetsWrapOptionsCore, ILetsWrapOptions } from './core';
 import { BindAll } from 'lodash-decorators/bindAll'
 
 export interface IFetch
@@ -15,7 +15,7 @@ export const enum EnumResponseType
 	text = 'text',
 }
 
-export interface ILetsWrapFetchOptions<T extends EnumResponseType | string = EnumResponseType.response | EnumResponseType.text | EnumResponseType.json | string> extends Omit<ILetsWrapOptions<RequestInit, Response>, 'http' | 'type'>
+export interface ILetsWrapFetchOptions<T = EnumResponseType.response | EnumResponseType.text | EnumResponseType.json | string> extends ILetsWrapOptions<IFetch>
 {
 	/**
 	 * response type, can be "json", "text" or "response"
@@ -26,22 +26,19 @@ export interface ILetsWrapFetchOptions<T extends EnumResponseType | string = Enu
 }
 
 @BindAll()
-export class LetsWrapFetch extends LetsWrap<RequestInit, Response, IFetch>
+export class LetsWrapFetch extends LetsWrap<IFetch, ILetsWrapFetchOptions>
 {
 	constructor(options?: ILetsWrapFetchOptions)
 	{
 		super(options);
 
 		// @ts-ignore
-		this.defaultOptions.type = this.defaultOptions.type || EnumResponseType.json
+		this.defaultOptions.type = this.defaultOptions.type || EnumResponseType.json;
 
 		this.$http = this.$http || {
 			request: _fetch,
 		}
 	}
-
-	retry = this.setRetry;
-	retryWait = this.setRetryWait;
 
 	single<T = Response>(url: string, options?: ILetsWrapFetchOptions<EnumResponseType | string>): Bluebird<T>
 	{
@@ -58,10 +55,7 @@ export class LetsWrapFetch extends LetsWrap<RequestInit, Response, IFetch>
 		let savedResponse: Response;
 		let savedContent: T;
 
-		// @ts-ignore
 		options = this.mergeOptions(options);
-
-		console.dir(options);
 
 		return super.request<Response>(url, options)
 			.then((response) =>
@@ -88,8 +82,6 @@ export class LetsWrapFetch extends LetsWrap<RequestInit, Response, IFetch>
 			{
 				savedContent = content;
 
-				console.dir(content);
-
 				if (savedResponse && savedResponse.status >= 400)
 				{
 					throw new Error(`Response status indicates error`)
@@ -98,7 +90,6 @@ export class LetsWrapFetch extends LetsWrap<RequestInit, Response, IFetch>
 				return content
 			}).catch((err) =>
 			{
-
 				err._response_ = savedResponse
 				err._content_ = savedContent
 				err._url_ = url
@@ -107,3 +98,5 @@ export class LetsWrapFetch extends LetsWrap<RequestInit, Response, IFetch>
 			}) as any as Bluebird<T>
 	}
 }
+
+export default LetsWrapFetch
