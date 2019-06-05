@@ -253,6 +253,7 @@ export class LetsWrap<H extends IHttpRequest<any, any, any>, O = Record<string, 
 	{
 		return new LetsWrap(this.mergeOptions(options as any) as any)
 	}
+
 }
 
 export type ILetsWrapOptions<H extends IHttpRequest, O = Record<string, unknown>> = ILetsWrapOptionsCore<H> & O

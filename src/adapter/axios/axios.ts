@@ -6,9 +6,11 @@ import Axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosPromise }
 import { ILetsWrapFetchOptions } from '../fetch';
 import AxiosClass from 'axios/lib/core/Axios';
 import Bluebird from 'bluebird'
+import { BindAll } from 'lodash-decorators';
 
 export type IHttpRequestAxios<O3 extends AxiosRequestConfig = AxiosRequestConfig, R3 extends AxiosResponse = AxiosResponse, T3 extends AxiosInstance = AxiosInstance> = IHttpRequest<O3, R3, T3>
 
+@BindAll()
 export class LetsWrapAxios<O4 extends AxiosRequestConfig, R4 extends AxiosResponse, T4 extends AxiosInstance> extends LetsWrap<IHttpRequestAxios<O4, R4, T4>, O4>
 {
 	constructor(options?: ILetsWrapOptions<IHttpRequestAxios<O4, R4, T4>, O4>)
