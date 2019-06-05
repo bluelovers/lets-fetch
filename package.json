@@ -12,6 +12,8 @@
     "universal",
     "whatwg",
     "request",
+    "request",
+    "single",
     "axios",
     "wrapper",
     "xhr"
@@ -32,12 +34,15 @@
     "test": "tests"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.esm.json && tsc -p tsconfig.json",
+    "build:before": "git rm ./esm -r -f & git rm ./lib -r -f & echo build:before",
+    "build:after": "git add ./esm && git add ./lib & echo build:after",
+    "build:tsc": "tsc -p tsconfig.esm.json && tsc -p tsconfig.json",
+    "build": "npm run build:before & npm run build:tsc & npm run build:after",
     "coverage": "npx nyc npm run test",
     "lint": "npx eslint **/*.ts",
     "ncu": "npx yarn-tool ncu -u",
     "prepublishOnly": "npm run ncu && npm run sort-package-json && npm run test",
-    "postpublish": "git commit -m 'publish new version' .",
+    "postpublish": "git commit -m 'publish new version' . & echo postpublish",
     "sort-package-json": "npx sort-package-json ./package.json",
     "test": "npm run build && jest --coverage"
   },
@@ -47,10 +52,16 @@
     "ts-type": "^1.2.2"
   },
   "peerDependencies": {
-    "@bluelovers/tsconfig": "^1.0.6",
+
+
+    "axios": "^0.19.0",
     "cross-fetch": "^3.0.3"
   },
   "devDependencies": {
+    "axios": "^0.19.0",
+    "cross-fetch": "^3.0.3",
+    "@bluelovers/tsconfig": "^1.0.6",
+    "@types/axios": "^0.14.0",
     "@types/fetch-mock": "^7.3.0",
     "@types/jest": "^24.0.13",
     "@types/lodash-decorators": "^4.0.0",

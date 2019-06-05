@@ -1,3 +1,4 @@
+// @ts-ignore
 import _fetch from 'cross-fetch'
 import Bluebird from 'bluebird'
 import LetsWrap, { ILetsWrapOptionsCore, ILetsWrapOptions } from '../..';

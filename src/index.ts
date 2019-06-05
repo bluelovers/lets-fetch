@@ -2,10 +2,16 @@ import { Resolvable, resolveCall, resolveTimeout, wait } from './util';
 import Bluebird from 'bluebird';
 import { BindAll } from 'lodash-decorators/bindAll'
 import { ITSOverwrite } from 'ts-type'
+import { AxiosInstance } from 'axios';
 
-export interface IHttpRequest<O = unknown, R = unknown>
+export const SymbolRequest = Symbol('request');
+export const SymbolError = Symbol('error');
+
+export interface IHttpRequest<O = unknown, R = unknown, F = unknown>
 {
-	request(url: string, options?: O): PromiseLike<R>
+	request?(url: string, options?: O): PromiseLike<R>
+
+	[SymbolRequest]?: F
 }
 
 export interface ILetsWrapOptionsCore<H extends IHttpRequest>
@@ -27,20 +33,36 @@ export interface ILetsWrapOptionsCore<H extends IHttpRequest>
 	internalRetry?: IRetryFn,
 	internalRetryWait?: IRetryWaitFn,
 
-	http?: H
+	$http?: H
 }
 
 const _internalRetry: IRetryFn = () => false;
 const _internalRetryWait: IRetryWaitFn = (tries) => 0;
 
 @BindAll()
-export class LetsWrap<H extends IHttpRequest, O = Record<string, unknown>>
+export class LetsWrap<H extends IHttpRequest<any, any, any>, O = Record<string, unknown>>
 {
 	public $http: H;
+
+	static toRequestLike<O3, R3, T3>(request, orig?: T3): IHttpRequest<O3, R3, T3>
+	{
+		return {
+			request(url: string, options?: O3): PromiseLike<R3>
+			{
+				return request(url, options)
+			},
+			[SymbolRequest]: orig || request
+		}
+	}
 
 	constructor(protected defaultOptions: ILetsWrapOptions<H, O> = {} as any)
 	{
 		this.setDefault({} as any)
+	}
+
+	defaultHttp(options?: ILetsWrapOptions<H, O>): H
+	{
+		throw new ReferenceError(`not implemented`)
 	}
 
 	setDefault(options?: ILetsWrapOptions<H, O>)
@@ -57,9 +79,9 @@ export class LetsWrap<H extends IHttpRequest, O = Record<string, unknown>>
 		Object.assign(this.defaultOptions, options);
 
 		// @ts-ignore
-		this.$http = this.defaultOptions.http || this.$http;
+		this.$http = this.defaultOptions.$http || this.$http;
 
-		delete this.defaultOptions.http;
+		delete this.defaultOptions.$http;
 	}
 
 	/**
@@ -71,7 +93,7 @@ export class LetsWrap<H extends IHttpRequest, O = Record<string, unknown>>
 			.resolve(this.mergeOptions(options))
 			.then((options) =>
 			{
-				return this.$http.request(url, this.requestOption(options))
+				return this.$http.request(url, this.requestOption(options, url))
 			})
 			.tap(v =>
 			{
@@ -92,12 +114,15 @@ export class LetsWrap<H extends IHttpRequest, O = Record<string, unknown>>
 	{
 		let tries = 1;
 
+		options = this.mergeOptions(options);
+
+		let { timeout } = options;
+
 		return Bluebird
-			.resolve(this.mergeOptions(options))
+			.resolve(options)
 			.then((options) =>
 			{
 				const { internalRetry, internalRetryWait } = options;
-				let { timeout } = options;
 
 				const callRequest = () =>
 				{
@@ -120,6 +145,18 @@ export class LetsWrap<H extends IHttpRequest, O = Record<string, unknown>>
 				}
 
 				return callRequest()
+			})
+			.tapCatch(err => {
+
+				err[SymbolError] = err[SymbolError] || {};
+				err[SymbolError].tries = tries;
+				err[SymbolError].url = url;
+
+				if (timeout > 0)
+				{
+					err[SymbolError].timeout = (timeout | 0) + 1;
+				}
+
 			}) as any as Bluebird<T>
 			;
 	}
@@ -159,7 +196,7 @@ export class LetsWrap<H extends IHttpRequest, O = Record<string, unknown>>
 		});
 	}
 
-	requestOption(options: ILetsWrapOptions<H, O>)
+	requestOption(options: ILetsWrapOptions<H, O>, url?: string)
 	{
 		let ro = {
 			...options.requestOptions,
@@ -170,6 +207,12 @@ export class LetsWrap<H extends IHttpRequest, O = Record<string, unknown>>
 		{
 			// @ts-ignore
 			ro.timeout = options.timeout
+		}
+
+		if (url != null)
+		{
+			// @ts-ignore
+			ro.url = url
 		}
 
 		return ro;
@@ -202,7 +245,7 @@ export class LetsWrap<H extends IHttpRequest, O = Record<string, unknown>>
 		return {
 			...this.defaultOptions,
 			// @ts-ignore
-			http: this.$http,
+			$http: this.$http,
 		}
 	}
 
