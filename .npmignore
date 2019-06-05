@@ -60,3 +60,6 @@ intellij-style-guide.xml
 jest.config.js
 /src/*.d.ts
 /src/*.js
+/tsconfig.esm.json
+/tsconfig.json
+/jest.config.js

@@ -1,4 +1,4 @@
-import LetsWrap, { ILetsWrapOptionsCore, IUnpackHttpRequestOptions, IUnpackReturnTypeHttpRequest } from './core';
+import LetsWrap, { ILetsWrapOptionsCore, IUnpackHttpRequestOptions, IUnpackReturnTypeHttpRequest } from './index';
 import Bluebird from 'bluebird';
 import { BindAll } from 'lodash-decorators/bindAll'
 import { ResponseError } from './util'
@@ -6,7 +6,7 @@ import { ResponseError } from './util'
 type IMockResponse = Partial<Response>
 
 @BindAll()
-export class LetsWrapMock<T extends Partial<LetsWrap<any, any>>, R = IUnpackReturnTypeHttpRequest<T["$http"]> | unknown, O = IUnpackHttpRequestOptions<T["$http"]> | unknown>
+export class LetsWrapMock<T extends Partial<LetsWrap<any, any>>, R = IUnpackReturnTypeHttpRequest<T["$http"]> | Partial<Response> | unknown, O = IUnpackHttpRequestOptions<T["$http"]> | unknown>
 {
 	reqResponses: (R | Error | ResponseError)[] = []
 	reqOptions: O[] = []

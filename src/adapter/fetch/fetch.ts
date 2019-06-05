@@ -1,6 +1,6 @@
 import _fetch from 'cross-fetch'
 import Bluebird from 'bluebird'
-import LetsWrap, { ILetsWrapOptionsCore, ILetsWrapOptions } from './core';
+import LetsWrap, { ILetsWrapOptionsCore, ILetsWrapOptions } from '../..';
 import { BindAll } from 'lodash-decorators/bindAll'
 
 export interface IFetch
@@ -15,7 +15,7 @@ export const enum EnumResponseType
 	text = 'text',
 }
 
-export interface ILetsWrapFetchOptions<T = EnumResponseType.response | EnumResponseType.text | EnumResponseType.json | string> extends ILetsWrapOptions<IFetch>
+export interface ILetsWrapFetchOptions<T = EnumResponseType.response | EnumResponseType.text | EnumResponseType.json | string | 'text' | 'json' | 'response'> extends ILetsWrapOptions<IFetch, RequestInit>
 {
 	/**
 	 * response type, can be "json", "text" or "response"
@@ -38,6 +38,11 @@ export class LetsWrapFetch extends LetsWrap<IFetch, ILetsWrapFetchOptions>
 		this.$http = this.$http || {
 			request: _fetch,
 		}
+
+		if (!this.defaultOptions.method)
+		{
+			this.defaultOptions.method = 'GET'
+		}
 	}
 
 	single<T = Response>(url: string, options?: ILetsWrapFetchOptions<EnumResponseType | string>): Bluebird<T>
@@ -48,6 +53,25 @@ export class LetsWrapFetch extends LetsWrap<IFetch, ILetsWrapFetchOptions>
 	many<T extends unknown[] = Response[]>(urls: string[], options?: ILetsWrapFetchOptions): Bluebird<T>
 	{
 		return super.many<T>(urls, options)
+	}
+
+	requestOption(options: ILetsWrapFetchOptions)
+	{
+		let ro = super.requestOption(options);
+
+		Object.entries(options)
+			.forEach(([k, v]) =>
+			{
+
+				if (ro[k] == null)
+				{
+					ro[k] = v;
+				}
+
+			})
+		;
+
+		return ro;
 	}
 
 	request<T = Response>(url: string, options?: ILetsWrapFetchOptions): Bluebird<T>
@@ -88,8 +112,18 @@ export class LetsWrapFetch extends LetsWrap<IFetch, ILetsWrapFetchOptions>
 				}
 
 				return content
-			}).catch((err) =>
+			}).catch((error) =>
 			{
+				let err: Error & any = error;
+
+				if (!(err instanceof Error) && savedResponse && savedResponse.status >= 400)
+				{
+					err = new Error(`Status ${savedResponse.status}: ${error && error.message}`)
+
+					// @ts-ignore
+					err._old_ = error
+				}
+
 				err._response_ = savedResponse
 				err._content_ = savedContent
 				err._url_ = url

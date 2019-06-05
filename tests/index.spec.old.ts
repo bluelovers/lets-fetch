@@ -1,5 +1,5 @@
 /* eslint-env jest */
-import LetsWrapFetch, { EnumResponseType } from '../lib/fetch'
+import { LetsWrapFetch, EnumResponseType } from '../lib/adapter/fetch'
 import { sandbox } from 'fetch-mock'
 
 const fetch = new LetsWrapFetch();
@@ -51,7 +51,7 @@ describe('requesting', () => {
       ['http://test.com/test', '<h1>Foo</h1>']
     ])
 
-    let content = await fetch.single('http://test.com/test', { type: EnumResponseType.text })
+    let content = await fetch.single('http://test.com/test', { type: 'text' })
     expect(content).toEqual('<h1>Foo</h1>')
   })
 

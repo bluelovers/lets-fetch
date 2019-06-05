@@ -1,19 +1,32 @@
 {
-  "name": "lets-fetch2",
+  "name": "lets-fetch-wrapper",
   "version": "2.1.3",
   "description": "Single and parallel requests with retrying and error handling.",
-  "keywords": [],
-  "homepage": "https://github.com/queicherius/lets-fetch#readme",
+  "keywords": [
+    "ajax",
+    "fetch",
+    "http",
+    "isomorphic",
+    "node",
+    "promise",
+    "universal",
+    "whatwg",
+    "request",
+    "axios",
+    "wrapper",
+    "xhr"
+  ],
+  "homepage": "https://github.com/bluelovers/lets-fetch#readme",
   "bugs": {
-    "url": "https://github.com/queicherius/lets-fetch/issues"
+    "url": "https://github.com/bluelovers/lets-fetch/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/queicherius/lets-fetch.git"
+    "url": "git+https://github.com/bluelovers/lets-fetch.git"
   },
   "license": "MIT",
   "author": "queicherius@gmail.com",
-  "main": "./lib/index.js",
+  "main": "./lib",
   "directories": {
     "lib": "lib",
     "test": "tests"
@@ -30,10 +43,12 @@
   },
   "dependencies": {
     "bluebird": "^3.5.5",
-    "cross-fetch": "^3.0.3",
-    "fetch-mock": "^7.3.3",
     "lodash-decorators": "^6.0.1",
     "ts-type": "^1.2.2"
+  },
+  "peerDependencies": {
+    "@bluelovers/tsconfig": "^1.0.6",
+    "cross-fetch": "^3.0.3"
   },
   "devDependencies": {
     "@types/fetch-mock": "^7.3.0",

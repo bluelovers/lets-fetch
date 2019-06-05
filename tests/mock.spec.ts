@@ -1,7 +1,7 @@
 /* eslint-env jest */
-import { EnumResponseType } from '../lib/fetch';
-import { LetsWrapMock } from '../lib/coreMock';
-import LetsWrapFetch from '../lib/fetch';
+import { EnumResponseType } from '../lib/adapter/fetch';
+import { LetsWrapMock } from '../lib/mock';
+import { LetsWrapFetch } from '../lib/adapter/fetch';
 
 let mock = new LetsWrapMock(new LetsWrapFetch())
 
