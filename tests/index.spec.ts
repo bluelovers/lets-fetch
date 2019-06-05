@@ -1,7 +1,24 @@
 /* eslint-env jest */
-import * as fetch from '../src'
-import { EnumResponseType, IOptions } from '../src'
+import fetch from '../lib/index'
 import { sandbox } from 'fetch-mock'
+
+//import { EnumResponseType } from '../src/fetch';
+
+export const enum EnumResponseType
+{
+  response = 'response',
+  json = 'json',
+  text = 'text',
+}
+
+interface IOptions extends Record<string, any>
+{
+
+}
+
+const testOptions = {
+  type: EnumResponseType.json
+};
 
 const fetchMock = sandbox()
 
@@ -17,7 +34,15 @@ function mockResponses (array) {
   })
 
   // @ts-ignore
-  fetch.fetch = fetchMock
+  //fetch.fetch = fetchMock
+
+  fetch.setDefault({
+    http: {
+      request: fetchMock
+    },
+  })
+
+  fetch.$http.request = fetchMock
 }
 
 describe('requesting', () => {
@@ -26,7 +51,9 @@ describe('requesting', () => {
       ['http://test.com/test', { id: 123 }]
     ])
 
-    let content = await fetch.single('http://test.com/test')
+    let content = await fetch.single('http://test.com/test', {
+      type: EnumResponseType.json
+    })
     expect(content).toEqual({ id: 123 })
   })
 
@@ -64,7 +91,9 @@ describe('requesting', () => {
       'http://test.com/test',
       'http://test.com/test2',
       'http://test.com/test3'
-    ])
+    ], {
+      type: EnumResponseType.json
+    })
     expect(content).toEqual([{ id: 123 }, { id: 456 }, { id: 789 }])
   })
 
@@ -131,7 +160,7 @@ describe('waiting', () => {
       time: number
     }[]>(
       ['http://1.com', 'http://2.com', 'http://3.com'],
-      { waitTime: 100 }
+      { waitTime: 100, type: EnumResponseType.json }
     ).map(x => x.time)
 
     expect(timestamps[1] - timestamps[0]).toBeGreaterThan(99)
@@ -145,7 +174,9 @@ describe('underlying fetch api', () => {
       ['http://test.com/test', { id: 123 }]
     ])
 
-    let content = await fetch.single('http://test.com/test')
+    let content = await fetch.single('http://test.com/test', {
+      type: EnumResponseType.json
+    })
     expect(content).toEqual({ id: 123 })
     expect(fetchMock.lastOptions()).toEqual({
       type: 'json',
@@ -179,7 +210,7 @@ describe('error handling', () => {
     ])
 
     try {
-      await fetch.single('http://failing.com/yes')
+      await fetch.single('http://failing.com/yes', testOptions)
     } catch (e) {
       var err = e
     }
@@ -226,7 +257,7 @@ describe('error handling', () => {
     ])
 
     try {
-      await fetch.single('http://failing.com/malformed')
+      await fetch.single('http://failing.com/malformed', testOptions)
     } catch (e) {
       var err = e
     }
@@ -241,7 +272,7 @@ describe('error handling', () => {
     ])
 
     try {
-      await fetch.single('http://failing.com/malformed')
+      await fetch.single('http://failing.com/malformed', testOptions)
     } catch (e) {
       var err = e
     }
@@ -256,7 +287,7 @@ describe('error handling', () => {
     ])
 
     try {
-      await fetch.single('http://failing.com/erroring')
+      await fetch.single('http://failing.com/erroring', testOptions)
     } catch (e) {
       var err = e
     }
@@ -293,7 +324,7 @@ describe('retrying', () => {
     ])
 
     try {
-      await fetch.single('http://test.com/test')
+      await fetch.single('http://test.com/test', testOptions)
     } catch (e) {
       var err = e
     }
@@ -311,7 +342,7 @@ describe('retrying', () => {
     ])
 
     try {
-      await fetch.single('http://test.com/test')
+      await fetch.single('http://test.com/test', testOptions)
     } catch (e) {
       var err = e
     }
@@ -330,7 +361,7 @@ describe('retrying', () => {
     ])
 
     try {
-      await fetch.single('http://test.com/test')
+      await fetch.single('http://test.com/test', testOptions)
     } catch (e) {
       var err = e
     }

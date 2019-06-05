@@ -1,7 +1,6 @@
 /* eslint-env jest */
-import * as mock from '../src/mock'
-import * as fetch from '../src/index';
-import { EnumResponseType, IOptions } from '../src/index';
+import mock from '../lib/mock'
+import { EnumResponseType } from '../lib/fetch';
 
 // @ts-ignore
 //mock.__set__('fetch', {
@@ -10,7 +9,7 @@ import { EnumResponseType, IOptions } from '../src/index';
 //  retry: (cb) => cb()
 //})
 
-Object.assign(fetch, {
+Object.assign(mock.target, {
   single: async () => 'Some Content',
   many: async () => ['Some Content'],
   retry: (cb) => cb()
@@ -70,10 +69,10 @@ describe('mock', () => {
   it('can reset and get the request options', async () => {
     mock.reset()
     mock.addResponse({ foo: 'bar' })
-    let options: IOptions = { type: EnumResponseType.text, headers: { Authenticate: 'Token' } }
+    let options = { type: EnumResponseType.text, headers: { Authenticate: 'Token' } }
 
     await mock.single('some/url', options)
-    expect(mock.options()).toEqual([options])
+    expect(mock.reqOptions).toEqual([options])
     expect(mock.lastOption()).toEqual(options)
   })
 

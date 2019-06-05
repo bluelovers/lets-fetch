@@ -6,11 +6,11 @@
     "esModuleInterop": true,
     "skipLibCheck": true
   },
-  "files": [
-    "./src/index.ts",
-    "./src/mock.ts"
+  "include": [
+    "./src/*.ts"
   ],
   "exclude": [
+    "**/*.d.ts",
     "**/tests/**",
     "**/esm/**",
     "**/lib/**"

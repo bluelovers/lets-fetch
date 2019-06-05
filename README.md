@@ -46,7 +46,7 @@ fetch.single('http://...')
 
 ### Options
 
-You can pass `single` and `many` an optional `options` parameter. 
+You can pass `single` and `many` an optional `options` parameter.
 The available options with their corresponding defaults are:
 
 ```js
@@ -82,27 +82,27 @@ You can set a custom function that gets the current number of tries as well as t
 
 ```js
 // Retry until we get a valid response
-fetch.retry(() => true)
+fetch.setRetry(() => true)
 
 // Try to get the response a total of three times
-fetch.retry((tries) => tries <= 3)
+fetch.setRetry((tries) => tries <= 3)
 
 // Try to get the response a total of three times if the
 // status code equals to "Internal Server Error"
-fetch.retry((tries, err) => tries <= 3 && err.response.status === 500)
+fetch.setRetry((tries, err) => tries <= 3 && err.response.status === 500)
 ```
 
 You can also set a function that defines how long the module should wait between each unsuccessful try. By default this is set to instant retries.
 
 ```js
 // Don't wait between failed tries
-fetch.retryWait(() => false)
+fetch.setRetryWait(() => false)
 
 // Wait a static 100ms between each failed try
-fetch.retryWait(() => 100)
+fetch.setRetryWait(() => 100)
 
 // Wait based on the number of failed tries
-fetch.retryWait(tries => tries * 100)
+fetch.setRetryWait(tries => tries * 100)
 ```
 
 ## Mocking
