@@ -1,6 +1,6 @@
 {
   "name": "lets-fetch-wrapper",
-  "version": "2.1.4",
+  "version": "2.1.5",
   "description": "Single and parallel requests with retrying and error handling.",
   "keywords": [
     "ajax",

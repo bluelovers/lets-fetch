@@ -37,9 +37,24 @@ export declare class LetsWrap<H extends IHttpRequest<any, any, any>, O = Record<
      * Request a single url
      */
     single<T = IUnpackReturnTypeHttpRequest<H>>(url: string, options?: ILetsWrapOptions<H, O>): Bluebird<T>;
+    /**
+     * return a IterableIterator (need use yield or .all())
+     */
+    paginate<T = IUnpackReturnTypeHttpRequest<H>>(initUrl: string, initOptions?: ILetsWrapOptions<H, O>, pageConfig?: {
+        initPage?: number;
+        hasPage?(page: number): boolean;
+        requestPage?(page: number, url: string, options?: ILetsWrapOptions<H, O>): {
+            url: string;
+            options: ILetsWrapOptions<H, O>;
+            requestOptions: ILetsWrapOptions<H, O>["requestOptions"];
+        };
+    }): IterableIterator<Bluebird<T>> & {
+        prev(): IteratorResult<Bluebird<T>>;
+        all(): Bluebird<T[]>;
+    };
     many<T extends unknown[] = IUnpackReturnTypeHttpRequest<H>[]>(urls: string[], options?: ILetsWrapOptions<H, O>): Bluebird<T>;
     mergeOptions(options: ILetsWrapOptions<H, O>): ILetsWrapOptions<H, O>;
-    requestOption(options: ILetsWrapOptions<H, O>, url?: string): Partial<IUnpackHttpRequestOptions<H>>;
+    requestOptions(options: ILetsWrapOptions<H, O>, url?: string): Partial<IUnpackHttpRequestOptions<H>>;
     /**
      * Set a custom decider function that decides to retry
      * based on the number of tries and the previous error

@@ -3,6 +3,7 @@ import Bluebird from 'bluebird';
 import { BindAll } from 'lodash-decorators/bindAll'
 import { ITSOverwrite } from 'ts-type'
 import { AxiosInstance } from 'axios';
+import { IHttpRequestAxiosOptions } from './adapter/axios/axios';
 
 export const SymbolRequest = Symbol('request');
 export const SymbolError = Symbol('error');
@@ -51,7 +52,7 @@ export class LetsWrap<H extends IHttpRequest<any, any, any>, O = Record<string, 
 			{
 				return request(url, options)
 			},
-			[SymbolRequest]: orig || request
+			[SymbolRequest]: orig || request,
 		}
 	}
 
@@ -93,7 +94,7 @@ export class LetsWrap<H extends IHttpRequest<any, any, any>, O = Record<string, 
 			.resolve(this.mergeOptions(options))
 			.then((options) =>
 			{
-				return this.$http.request(url, this.requestOption(options, url))
+				return this.$http.request(url, this.requestOptions(options, url))
 			})
 			.tap(v =>
 			{
@@ -146,7 +147,8 @@ export class LetsWrap<H extends IHttpRequest<any, any, any>, O = Record<string, 
 
 				return callRequest()
 			})
-			.tapCatch(err => {
+			.tapCatch(err =>
+			{
 
 				err[SymbolError] = err[SymbolError] || {};
 				err[SymbolError].tries = tries;
@@ -159,6 +161,113 @@ export class LetsWrap<H extends IHttpRequest<any, any, any>, O = Record<string, 
 
 			}) as any as Bluebird<T>
 			;
+	}
+
+	/**
+	 * return a IterableIterator (need use yield or .all())
+	 */
+	paginate<T = IUnpackReturnTypeHttpRequest<H>>(initUrl: string, initOptions?: ILetsWrapOptions<H, O>, pageConfig?: {
+		initPage?: number,
+		hasPage?(page: number): boolean,
+		requestPage?(page: number, url: string, options?: ILetsWrapOptions<H, O>): {
+			url: string,
+			options: ILetsWrapOptions<H, O>,
+			requestOptions: ILetsWrapOptions<H, O>["requestOptions"]
+		},
+	})
+	{
+		const { hasPage = () => true, initPage = 0 } = pageConfig;
+		let { requestPage } = pageConfig;
+		initOptions = this.mergeOptions(initOptions);
+		const self = this;
+		let currentPage = initPage | 0;
+
+		if (requestPage == null)
+		{
+			// @ts-ignore
+			requestPage = (page: number,
+				url,
+				options,
+			) =>
+			{
+				let requestOptions = this.requestOptions(options);
+
+				// @ts-ignore
+				requestOptions.params = requestOptions.params || {};
+				requestOptions.params.page = page;
+
+				// @ts-ignore
+				requestOptions.data = requestOptions.data || {};
+				requestOptions.data.page = page;
+
+				return {
+					url,
+					options,
+					requestOptions,
+				}
+			}
+		}
+
+		let fn = (function* ()
+		{
+			while (hasPage(currentPage))
+			{
+				let { url, options, requestOptions } = requestPage(currentPage, initUrl, initOptions);
+
+				if (requestOptions != null)
+				{
+					options.requestOptions = requestOptions;
+				}
+
+				currentPage++;
+
+				yield self.single<T>(url, options);
+			}
+
+		}).bind(this)();
+
+		return Object.assign(fn as IterableIterator<Bluebird<T>>, {
+			prev()
+			{
+				currentPage--;
+				return fn.next()
+			},
+			all()
+			{
+				return Bluebird.resolve(fn)
+					.then(async () =>
+					{
+						const { waitTime } = initOptions;
+						currentPage = initPage | 0;
+
+						let ls: T[] = [];
+						let v: IteratorResult<Bluebird<T>>;
+						while (v = fn.next())
+						{
+							let r = await v.value;
+
+							if (v.done)
+							{
+								if (v.value != null)
+								{
+									ls.push(r);
+								}
+
+								break;
+							}
+
+							ls.push(r);
+
+							if (waitTime)
+							{
+								await Bluebird.delay(waitTime | 0)
+							}
+						}
+						return ls;
+					})
+					;
+			},
+		});
 	}
 
 	many<T extends unknown[] = IUnpackReturnTypeHttpRequest<H>[]>(urls: string[],
@@ -196,7 +305,7 @@ export class LetsWrap<H extends IHttpRequest<any, any, any>, O = Record<string, 
 		});
 	}
 
-	requestOption(options: ILetsWrapOptions<H, O>, url?: string)
+	requestOptions(options: ILetsWrapOptions<H, O>, url?: string)
 	{
 		let ro = {
 			...options.requestOptions,

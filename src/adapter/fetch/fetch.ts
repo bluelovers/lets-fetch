@@ -56,9 +56,9 @@ export class LetsWrapFetch extends LetsWrap<IFetch, ILetsWrapFetchOptions>
 		return super.many<T>(urls, options)
 	}
 
-	requestOption(options: ILetsWrapFetchOptions)
+	requestOptions(options: ILetsWrapFetchOptions)
 	{
-		let ro = super.requestOption(options);
+		let ro = super.requestOptions(options);
 
 		Object.entries(options)
 			.forEach(([k, v]) =>

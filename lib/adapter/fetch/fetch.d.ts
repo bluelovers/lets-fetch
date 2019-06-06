@@ -20,7 +20,7 @@ export declare class LetsWrapFetch extends LetsWrap<IFetch, ILetsWrapFetchOption
     constructor(options?: ILetsWrapFetchOptions);
     single<T = Response>(url: string, options?: ILetsWrapFetchOptions<EnumResponseType | string>): Bluebird<T>;
     many<T extends unknown[] = Response[]>(urls: string[], options?: ILetsWrapFetchOptions): Bluebird<T>;
-    requestOption(options: ILetsWrapFetchOptions): Partial<RequestInit>;
+    requestOptions(options: ILetsWrapFetchOptions): Partial<RequestInit>;
     request<T = Response>(url: string, options?: ILetsWrapFetchOptions): Bluebird<T>;
 }
 export default LetsWrapFetch;
