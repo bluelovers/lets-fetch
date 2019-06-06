@@ -1,6 +1,6 @@
 {
   "name": "lets-fetch-wrapper",
-  "version": "2.1.3",
+  "version": "2.1.4",
   "description": "Single and parallel requests with retrying and error handling.",
   "keywords": [
     "ajax",
@@ -43,7 +43,7 @@
     "coverage": "npx nyc npm run test",
     "lint": "npx eslint **/*.ts",
     "ncu": "npx yarn-tool ncu -u",
-    "prepublishOnly": "npm run ncu && npm run sort-package-json && npm run test",
+    "prepublishOnly": "npm run sort-package-json && npm run test",
     "postpublish": "git commit -m \"publish new version\" . & echo postpublish",
     "sort-package-json": "npx sort-package-json ./package.json",
     "test": "npm run build && jest --coverage"
@@ -62,8 +62,8 @@
     "axios": "^0.19.0",
     "cross-fetch": "^3.0.3",
     "fetch-mock": "^7.3.3",
-    "jest": "24",
-    "ts-jest": "24"
+    "jest": "23",
+    "ts-jest": "23"
   },
   "peerDependencies": {
     "axios": "^0.19.0",
